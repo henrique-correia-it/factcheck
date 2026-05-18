@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FactCheck — Verificação em Tempo Real</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+
+
+  <!-- ================================================================
+         ECRÃ 1 — Input do URL
+    ================================================================ -->
+  <section class="input-section" id="inputSection">
+    <div class="input-card">
+      <div class="input-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path
+            d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
+          <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor" stroke="none" />
+        </svg>
+      </div>
+      <h2 class="input-card-title">Cole o link do vídeo YouTube</h2>
+      <p class="input-card-subtitle">
+        O sistema pré-processa a transcrição completa antes de iniciar o vídeo,
+        garantindo que as verificações aparecem sincronizadas ao longo de todo o debate.
+      </p>
+      <div class="input-row">
+        <input type="url" id="youtubeUrl" class="url-input" placeholder="https://www.youtube.com/watch?v=..."
+          autocomplete="off" spellcheck="false" />
+        <button class="btn-primary" onclick="startFactCheck()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          Iniciar Análise
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+         ECRÃ 2 — Pré-processamento (mostra enquanto backend analisa tudo)
+    ================================================================ -->
+  <section class="prep-section" id="prepSection" style="display:none">
+    <div class="prep-card">
+
+      <!-- Spinner animado -->
+      <div class="prep-spinner">
+        <svg viewBox="0 0 50 50" class="spinner-svg">
+          <circle cx="25" cy="25" r="20" fill="none" stroke="var(--accent)" stroke-width="4" stroke-dasharray="100 28"
+            stroke-linecap="round" />
+        </svg>
+        <svg class="spinner-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+          <path d="m8 11 2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+
+      <h2 class="prep-title" id="prepTitle">A analisar o debate…</h2>
+      <p class="prep-subtitle" id="prepSubtitle">A extrair transcrição do YouTube…</p>
+
+      <div class="prep-overview">
+        <div class="prep-overview-item">
+          <span class="prep-overview-label">Segmentos</span>
+          <span class="prep-overview-value" id="prepChunksDone">0/0</span>
+        </div>
+        <div class="prep-overview-item">
+          <span class="prep-overview-label">Verificações</span>
+          <span class="prep-overview-value" id="prepVerifiedCount">0</span>
+        </div>
+        <div class="prep-overview-item">
+          <span class="prep-overview-label">Tempo</span>
+          <span class="prep-overview-value" id="prepElapsedTime">0s</span>
+        </div>
+      </div>
+
+      <!-- Barra de progresso -->
+      <div class="prep-progress-wrap">
+        <div class="prep-progress-track">
+          <div class="prep-progress-bar" id="prepProgressBar" style="width:0%"></div>
+        </div>
+        <div class="prep-progress-info">
+          <span id="prepProgressPct">0%</span>
+          <span id="prepTimeEstimate"></span>
+        </div>
+      </div>
+
+      <div class="prep-workflow" aria-label="Estado da análise">
+        <div class="prep-step active" id="prepStepTranscript">
+          <span class="prep-step-dot"></span>
+          <span class="prep-step-text">Obter transcrição</span>
+          <span class="prep-step-meta" id="prepStepTranscriptMeta">A iniciar</span>
+        </div>
+        <div class="prep-step" id="prepStepExtract">
+          <span class="prep-step-dot"></span>
+          <span class="prep-step-text">Extrair afirmações</span>
+          <span class="prep-step-meta" id="prepStepExtractMeta">A aguardar</span>
+        </div>
+        <div class="prep-step" id="prepStepVerify">
+          <span class="prep-step-dot"></span>
+          <span class="prep-step-text">Pesquisar e verificar</span>
+          <span class="prep-step-meta" id="prepStepVerifyMeta">A aguardar</span>
+        </div>
+        <div class="prep-step" id="prepStepFinish">
+          <span class="prep-step-dot"></span>
+          <span class="prep-step-text">Preparar vídeo</span>
+          <span class="prep-step-meta" id="prepStepFinishMeta">A aguardar</span>
+        </div>
+      </div>
+
+      <div class="prep-activity">
+        <div class="prep-activity-row">
+          <span class="prep-activity-label">Agora</span>
+          <span class="prep-activity-value" id="prepCurrentAction">A preparar ligação...</span>
+        </div>
+        <div class="prep-activity-row">
+          <span class="prep-activity-label">Segmento</span>
+          <span class="prep-activity-value" id="prepCurrentSegment">Ainda não iniciado</span>
+        </div>
+        <div class="prep-activity-row">
+          <span class="prep-activity-label">Afirmação</span>
+          <span class="prep-activity-value" id="prepCurrentClaim">Nenhuma em verificação</span>
+        </div>
+      </div>
+
+      <!-- Contadores em tempo real -->
+      <div class="prep-stats">
+        <div class="prep-stat">
+          <span class="prep-stat-num" id="prepCountTrue">0</span>
+          <span class="prep-stat-label verdict-true">Verdadeiros</span>
+        </div>
+        <div class="prep-stat">
+          <span class="prep-stat-num" id="prepCountFalse">0</span>
+          <span class="prep-stat-label verdict-false">Falsos</span>
+        </div>
+        <div class="prep-stat">
+          <span class="prep-stat-num" id="prepCountMixed">0</span>
+          <span class="prep-stat-label verdict-mixed">Incertos</span>
+        </div>
+        <div class="prep-stat">
+          <span class="prep-stat-num" id="prepCountTotal">0</span>
+          <span class="prep-stat-label">Total</span>
+        </div>
+      </div>
+
+      <!-- Feed compacto das afirmações encontradas -->
+      <div class="prep-feed" id="prepFeed">
+        <p class="prep-feed-empty">As afirmações encontradas aparecem aqui…</p>
+      </div>
+
+      <button class="btn-ghost prep-cancel" onclick="resetApp()">Cancelar</button>
+    </div>
+  </section>
+
+  <!-- ================================================================
+         ECRÃ 3 — Player + Feed sincronizado
+    ================================================================ -->
+  <main class="main-layout" id="mainLayout" style="display:none">
+
+    <!-- PAINEL ESQUERDO: Feed de Verificações -->
+    <aside class="panel panel-left">
+      <div class="panel-header">
+        <div class="panel-title-row">
+
+          <h2 class="panel-title">Verificação de Factos</h2>
+        </div>
+        <div class="stats-row">
+          <div class="stat-chip stat-true">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="2 8 6 12 14 4" />
+            </svg>
+            <span id="countTrue">0</span> Verdadeiros
+          </div>
+          <div class="stat-chip stat-false">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="3" y1="3" x2="13" y2="13" />
+              <line x1="13" y1="3" x2="3" y2="13" />
+            </svg>
+            <span id="countFalse">0</span> Falsos
+          </div>
+          <div class="stat-chip stat-mixed">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="3" y1="8" x2="13" y2="8" />
+            </svg>
+            <span id="countMixed">0</span> Incertos
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila de próximas verificações -->
+      <div class="queue-banner" id="queueBanner" style="display:none">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="8" cy="8" r="6" />
+          <polyline points="8 5 8 8 10 10" />
+        </svg>
+        <span id="queueCount">0</span> verificações a aparecer
+        — próxima em <span id="queueNext">--:--</span>
+      </div>
+
+      <div class="claims-feed" id="claimsFeed">
+        <div class="empty-state" id="emptyState">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
+            <circle cx="32" cy="32" r="28" />
+            <path d="M20 32h24M32 20v24" stroke-linecap="round" />
+          </svg>
+          <p>As verificações aparecem aqui sincronizadas com o vídeo.</p>
+        </div>
+      </div>
+
+      <!-- Card de processamento em segundo plano -->
+      <div class="bg-processing-bar" id="bgProcessingBar" style="display:none">
+        <div class="bg-processing-top">
+          <svg class="bg-processing-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="8" cy="8" r="6" stroke-dasharray="28 10" stroke-linecap="round"/>
+          </svg>
+          <span class="bg-processing-label">A analisar em segundo plano</span>
+        </div>
+        <div class="bg-progress-track">
+          <div class="bg-progress-fill" id="bgProgressFill" style="width:0%"></div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="resizer" id="mainResizer"></div>
+
+    <!-- PAINEL DIREITO: Vídeo + Timeline -->
+    <section class="panel panel-right">
+      <div class="panel-header">
+        <h2 class="panel-title">Vídeo</h2>
+        <div class="panel-header-actions">
+
+          <button class="btn-ghost" onclick="resetApp()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Novo Vídeo
+          </button>
+        </div>
+      </div>
+
+      <div class="video-wrapper">
+        <div id="ytPlayer"></div>
+      </div>
+      <div class="resizer-v" id="timelineResizer"></div>
+      <div class="timeline-section">
+        <h3 class="timeline-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="timeline-icon">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          Timeline de Verificações
+        </h3>
+        <div class="timeline-track" id="timelineTrack">
+          <div class="timeline-rail"></div>
+        </div>
+        <div class="timeline-legend">
+          <span class="legend-item legend-true">Verdadeiro</span>
+          <span class="legend-item legend-false">Falso</span>
+          <span class="legend-item legend-mixed">Incerto</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="/static/script.js"></script>
+</body>
+
+</html>
