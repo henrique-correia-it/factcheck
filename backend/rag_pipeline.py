@@ -5,7 +5,7 @@ Pipeline RAG com pesquisa web em tempo real.
 
 Fluxo:
   1. Pesquisa web para a query gerada pelo extractor.
-  2. Fallback para FAISS local se a pesquisa falhar.
+  2. O contexto recuperado e anexado ao prompt.
   3. LLM classifica a claim com especial atencao a contexto temporal.
 """
 
@@ -15,15 +15,10 @@ import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
-from langchain_community.document_loaders import TextLoader
-from langchain_community.vectorstores import FAISS
-from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_ollama import ChatOllama
 
 from web_search import format_search_context, search_claim_variants
 
@@ -119,16 +114,13 @@ RESPONDA APENAS com este JSON:
 
 
 class FactCheckRAG:
-    """Motor de verificacao de factos com web search e fallback local."""
+    """Motor de verificacao de factos com retrieval web e classificacao LLM."""
 
     def __init__(self):
         base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         llm_model = os.getenv("LLM_MODEL", "gemma4:31b-cloud")
-        embed_model = os.getenv("EMBED_MODEL", "nomic-embed-text")
-        self.top_k = int(os.getenv("RAG_TOP_K", "3"))
         self.web_results = int(os.getenv("WEB_MAX_RESULTS", "3"))
         self.web_search_concurrency = int(os.getenv("WEB_SEARCH_CONCURRENCY", "4"))
-        self.enable_local_fallback = os.getenv("ENABLE_LOCAL_FALLBACK", "false").lower() == "true"
 
         self.llm = ChatOllama(
             model=llm_model,
@@ -138,50 +130,8 @@ class FactCheckRAG:
             num_predict=int(os.getenv("FACT_CHECK_NUM_PREDICT", "900")),
             sync_client_kwargs={"timeout": float(os.getenv("LLM_TIMEOUT_SECONDS", "45"))},
         )
-        self.embeddings = (
-            OllamaEmbeddings(model=embed_model, base_url=base_url)
-            if self.enable_local_fallback
-            else None
-        )
-        self.vectorstore: Optional[FAISS] = None
         self.chain = FACT_CHECK_PROMPT | self.llm
         self.batch_chain = BATCH_FACT_CHECK_PROMPT | self.llm
-        if self.enable_local_fallback:
-            self._build_index()
-
-    def _build_index(self) -> None:
-        """Indexa a knowledge_base local para fallback."""
-        kb_dir = Path(__file__).parent / "knowledge_base"
-
-        if not kb_dir.exists() or not any(kb_dir.glob("*.txt")):
-            self.vectorstore = FAISS.from_documents(
-                [Document(page_content="Base local vazia.", metadata={})],
-                self.embeddings,
-            )
-            return
-
-        documents = []
-        for txt_file in kb_dir.glob("*.txt"):
-            try:
-                loader = TextLoader(str(txt_file), encoding="utf-8")
-                docs = loader.load()
-                for doc in docs:
-                    doc.metadata["source"] = txt_file.stem.replace("_", " ").title()
-                documents.extend(docs)
-            except Exception as err:
-                logger.error(f"Erro ao carregar {txt_file.name}: {err}")
-
-        if not documents:
-            self.vectorstore = FAISS.from_documents(
-                [Document(page_content="Base local vazia.", metadata={})],
-                self.embeddings,
-            )
-            return
-
-        splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=80)
-        chunks = splitter.split_documents(documents)
-        logger.info(f"Indice RAG local: {len(chunks)} chunks.")
-        self.vectorstore = FAISS.from_documents(chunks, self.embeddings)
 
     def fact_check(self, claim_obj: dict, video_date: str = "", analysis_log=None) -> dict:
         """Verifica uma afirmacao usando pesquisa web em tempo real."""
@@ -306,29 +256,6 @@ class FactCheckRAG:
 
         if web_results:
             logger.info(f"RAG: {len(web_results)} resultados web encontrados.")
-
-        if not context_parts and self.vectorstore:
-            logger.info(f"Web search vazio - usando FAISS local para: '{search_query}'")
-            search_type = "local"
-            if analysis_log:
-                analysis_log.log("LOCAL_FALLBACK_START", query=search_query)
-            try:
-                docs = self.vectorstore.similarity_search(search_query, k=self.top_k)
-                context_parts = [doc.page_content for doc in docs]
-                sources = list({doc.metadata.get("source", "Base Local") for doc in docs})
-                source_qualities = ["local"] * len(sources)
-                if analysis_log:
-                    analysis_log.log(
-                        "LOCAL_FALLBACK_RESULTS",
-                        query=search_query,
-                        sources=sources,
-                        context_parts=context_parts,
-                    )
-            except Exception as err:
-                logger.warning(f"Fallback FAISS falhou: {err}")
-                context_parts = ["Contexto indisponivel."]
-                if analysis_log:
-                    analysis_log.log("LOCAL_FALLBACK_ERROR", query=search_query, error=repr(err))
 
         context = "\n\n---\n\n".join(context_parts) if context_parts else "Sem contexto disponivel."
         if analysis_log:

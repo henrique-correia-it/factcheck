@@ -53,7 +53,6 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "5"))  # segmentos de transcrição por chunk
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", str(max(1, min(5, CHUNK_SIZE // 5)))))
-CLAIM_DELAY_SECONDS = float(os.getenv("CLAIM_DELAY_SECONDS", "0.2"))
 FACT_CHECK_CONCURRENCY = int(os.getenv("FACT_CHECK_CONCURRENCY", "4"))
 CHUNK_CONCURRENCY = int(os.getenv("CHUNK_CONCURRENCY", "2"))
 
@@ -423,7 +422,7 @@ async def websocket_factcheck(websocket: WebSocket):
                         "confidence": res["confidence"],
                         "sources": res.get("sources", []),
                         "context_used": res.get("context_used", []),
-                        "search_type": res.get("search_type", "local"),
+                        "search_type": res.get("search_type", "web"),
                     })
                 
                 logger.info(f"[{idx+1}/{len(chunks)}] Bloco concluído.")

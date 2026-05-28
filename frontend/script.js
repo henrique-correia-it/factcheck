@@ -675,8 +675,8 @@ function resetState() {
 
 function buildContextHtml(contextUsed, sources, searchType) {
   const isWeb = searchType === "web";
-  const icon  = isWeb ? "🌐" : "📄";
-  const label = isWeb ? "Pesquisa Web (DuckDuckGo)" : "Base de Conhecimento Local";
+  const icon  = isWeb ? "🌐" : "🔎";
+  const label = isWeb ? "Pesquisa Web (DuckDuckGo)" : "Pesquisa externa";
 
   const linksHtml = (sources || []).map(s =>
     s.startsWith("http")
