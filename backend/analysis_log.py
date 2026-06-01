@@ -1,7 +1,7 @@
 """
 analysis_log.py
 ---------------
-Human-readable per-run analysis logs written to the project codex folder.
+Human-readable per-run analysis logs written to the project logs folder.
 """
 
 import json
@@ -23,7 +23,7 @@ class AnalysisRunLogger:
         self.url = url
 
         project_root = Path(__file__).resolve().parent.parent
-        log_dir = base_dir or project_root / "codex"
+        log_dir = base_dir or project_root / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
 
         safe_video_id = re.sub(r"[^0-9A-Za-z_-]+", "_", video_id or "unknown")

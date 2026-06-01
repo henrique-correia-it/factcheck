@@ -86,7 +86,7 @@ class ClaimExtractor:
 
     def __init__(self):
         base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        llm_model = os.getenv("LLM_MODEL", "gemma4:31b-cloud")
+        llm_model = os.getenv("LLM_MODEL", "minimax-m3:cloud")
 
         self.llm = ChatOllama(
             model=llm_model,
