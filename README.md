@@ -2,6 +2,12 @@
 
 > Analisa automaticamente os factos afirmados em debates e entrevistas do YouTube, sincronizado com o vídeo, utilizando apenas LLMs locais gratuitos.
 
+**Python · FastAPI · WebSockets · LangChain · Ollama · RAG**
+
+Projeto académico da unidade curricular de Inteligência Artificial Aplicada (IAAPLI), Licenciatura em Engenharia Eletrotécnica e de Computadores, ISEP, 2026.
+
+**Autores:** Henrique Correia e Guilherme Leão
+
 ---
 
 ## Como funciona
@@ -63,8 +69,8 @@ Resultados via WebSocket ──► Frontend sincronizado com o player
 
 ```bash
 # 1. Clonar o repositório
-git clone <url-do-repositório>
-cd Projeto_FactCheck
+git clone https://github.com/henrique-correia-it/factcheck.git
+cd factcheck
 
 # 2. Criar e activar um ambiente virtual
 python -m venv .venv
